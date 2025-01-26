@@ -17,7 +17,7 @@
           "username": "IMC Username",
           "password": "IMC Password"
         },
-        "description": "If you need help with the configuration have a look here: https://github.com/ecoen66/cisco_imc",
+        "description": "If you need help with the configuration have a look here: https://github.com/adamgreenhalgh/cisco_imc",
         "title": "Cisco IMC Configuration"
       }
     }

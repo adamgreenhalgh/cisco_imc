@@ -18,7 +18,7 @@ NAME = "Cisco IMC"
 DOMAIN = "cisco_imc"
 VERSION = "v2.3.2"
 
-ISSUE_URL = "https://github.com/ecoen66/cisco_imc/issues"
+ISSUE_URL = "https://github.com/adamgreenhalgh/cisco_imc/issues"
 
 LOGGER = logging.getLogger(__package__)
 

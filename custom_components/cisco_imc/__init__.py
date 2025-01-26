@@ -2,7 +2,7 @@
 Custom integration to integrate Cisco UCS IMC with Home Assistant.
 
 For more details about this integration, please refer to
-https://github.com/ecoen66/cisco_imc
+https://github.com/adamgreenhalgh/cisco_imc
 """
 from __future__ import annotations
 import asyncio
