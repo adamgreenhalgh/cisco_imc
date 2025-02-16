@@ -1,5 +1,5 @@
 pytest-homeassistant-custom-component==0.4.0
-imcsdk_adamgreenhalgh@git+https://github.com/adamgreenhalgh/imcsdk_adamgreenhalgh@main
+imcsdk@git+https://github.com/adamgreenhalgh/imcsdk@main
 homeassistant
 pytest
 pytest-asyncio

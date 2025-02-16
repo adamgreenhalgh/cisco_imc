@@ -11,8 +11,8 @@ from datetime import timedelta
 from collections import defaultdict
 #from typing import List
 
-from imcsdk_adamgreenhalgh.imchandle import ImcHandle
-from imcsdk_adamgreenhalgh.imcexception import ImcLoginError, ImcException, ImcConnectionError
+from imcsdk.imchandle import ImcHandle
+from imcsdk.imcexception import ImcLoginError, ImcException, ImcConnectionError
 
 from urllib.error import URLError
 
