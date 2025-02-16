@@ -1,6 +1,6 @@
 {
   "domain": "cisco_imc",
-  "name": "Cisco IMC",
+  "name": "Adams Cisco IMC",
   "documentation": "https://github.com/adamgreenhalgh/cisco_imc",
   "issue_tracker": "https://github.com/adamgreenhalgh/cisco_imc/issues",
   "dependencies": [
