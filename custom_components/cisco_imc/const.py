@@ -187,6 +187,19 @@ PCI_DEVICE_COUNT_SENSOR_TYPE = CiscoImcSensorEntityDescription(
     attributes_key=PCI_DEVICES_ATTR,
 )
 
+# CPU make/model from ProcessorUnit. State is the first equipped socket's
+# model string (in practice all sockets match on every server we've seen);
+# the full per-socket breakdown (vendor, speed, cores, threads, presence)
+# is exposed as an attribute for asymmetric/partially-populated cases.
+CPU_MODEL_SENSOR = "cpu_model"
+CPUS_ATTR = "cpu_details"
+CPU_MODEL_SENSOR_TYPE = CiscoImcSensorEntityDescription(
+    key=CPU_MODEL_SENSOR,
+    name="CPU Model",
+    icon="mdi:cpu-64-bit",
+    attributes_key=CPUS_ATTR,
+)
+
 # Severities counted as an actual problem for FAULT_PROBLEM_TYPE below.
 # "condition"/"info"/"cleared" are excluded as informational/resolved.
 FAULT_PROBLEM_SEVERITIES = {"critical", "major", "minor", "warning"}

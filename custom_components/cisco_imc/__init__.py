@@ -62,6 +62,9 @@ from .const import (
     PCI_DEVICE_COUNT_SENSOR,
     PCI_DEVICE_COUNT_SENSOR_TYPE,
     PCI_DEVICES_ATTR,
+    CPU_MODEL_SENSOR,
+    CPU_MODEL_SENSOR_TYPE,
+    CPUS_ATTR,
     FAULT_PROBLEM_SENSOR,
     FAULT_PROBLEM_TYPE,
     FAULT_PROBLEM_SEVERITIES,
@@ -201,6 +204,7 @@ async def get_homeassistant_components(hass, config_entry) -> dict[
     services["sensor"][STATIC_SENSOR] = STATIC_SENSOR_TYPE
     services["sensor"][FAULT_COUNT_SENSOR] = FAULT_COUNT_SENSOR_TYPE
     services["sensor"][PCI_DEVICE_COUNT_SENSOR] = PCI_DEVICE_COUNT_SENSOR_TYPE
+    services["sensor"][CPU_MODEL_SENSOR] = CPU_MODEL_SENSOR_TYPE
     services["switch"][SWITCH] = SWITCH_TYPE
     services["binary_sensor"][BINARY_SENSOR] = BINARY_SENSOR_TYPE
     services["binary_sensor"][FAULT_PROBLEM_SENSOR] = FAULT_PROBLEM_TYPE
@@ -415,6 +419,29 @@ class CiscoImcDataService(DataUpdateCoordinator):
             _LOGGER.debug(f"{self.imc} could not read PCI device inventory: {ex}")
             self.hass.custom_attributes[self.imc][PCI_DEVICE_COUNT_SENSOR] = 0
             self.hass.custom_attributes[self.imc][PCI_DEVICES_ATTR] = []
+
+        try:
+            cpus = [
+                {
+                    "socket": mo.socket_designation,
+                    "vendor": mo.vendor,
+                    "model": mo.model,
+                    "speed_mhz": mo.speed,
+                    "cores": mo.cores,
+                    "threads": mo.threads,
+                    "presence": mo.presence,
+                }
+                for mo in self.client.query_classid(class_id="ProcessorUnit")
+            ]
+            equipped = [cpu for cpu in cpus if cpu["presence"] == "equipped"]
+            self.hass.custom_attributes[self.imc][CPU_MODEL_SENSOR] = (
+                equipped[0]["model"] if equipped else None
+            )
+            self.hass.custom_attributes[self.imc][CPUS_ATTR] = cpus
+        except Exception as ex:
+            _LOGGER.debug(f"{self.imc} could not read CPU inventory: {ex}")
+            self.hass.custom_attributes[self.imc][CPU_MODEL_SENSOR] = None
+            self.hass.custom_attributes[self.imc][CPUS_ATTR] = []
 
         _LOGGER.debug(f"Updated Cisco IMC Rack Unit {self.imc}: {self.hass.custom_attributes[self.imc]}")
 
