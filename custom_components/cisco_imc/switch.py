@@ -23,7 +23,9 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     entities = []
     for device_key in entry_data["devices"]["switch"].keys():
         device_class = entry_data["devices"]["switch"][device_key]
-        if device_class.dn:
+        if device_class.key == "power":
+            entities.append(ImcPowerSwitch(hass, config_entry, device_class, coordinator))
+        elif device_class.dn:
             entities.append(ImcFeatureSwitch(hass, config_entry, device_class, coordinator))
         else:
             entities.append(ImcPollingSwitch(hass, config_entry, device_class, coordinator))
@@ -159,6 +161,68 @@ class ImcFeatureSwitch(CiscoImcDevice, SwitchEntity):
             admin_state == self.entity_description.state_on
         )
         self.async_write_ha_state()
+
+    @property
+    def should_poll(self):
+        return False
+
+
+class ImcPowerSwitch(CiscoImcDevice, SwitchEntity):
+    """Representation of the server's actual power state.
+
+    Unlike ImcFeatureSwitch, this reflects oper_power (already polled as
+    part of the rack-unit sensors) and writes admin_power on
+    sys/rack-unit-1 itself, matching the Power On/Off buttons.
+    """
+
+    entity_description: CiscoImcSwitchEntityDescription
+
+    def __init__(self, hass, config_entry, entity_description, coordinator):
+        """Initialise the switch."""
+        self.hass = hass
+        self.platform_name = "switch"
+        self.entity_description = entity_description
+        self.imc = config_entry.data.get(CONF_IP_ADDRESS)[0]
+        self.coordinator = coordinator
+        self._attr_name = f"{NAME} {self.imc} {self.entity_description.name}"
+        if self.hass.custom_attributes[self.imc]['usr_lbl']:
+            self._attr_name = f"{self.hass.custom_attributes[self.imc]['usr_lbl']} {self.entity_description.name}"
+        self._attributes = {}
+
+        super().__init__(self, hass, self.imc, entity_description, coordinator)
+
+    @property
+    def unique_id(self):
+        """Return a unique ID."""
+        if not self.coordinator.imc:
+            return None
+        return f"{DOMAIN}_{self.imc.lower().replace('.', '_')}_{self.entity_description.key}"
+
+    @property
+    def is_on(self):
+        """Return whether the server is currently powered on."""
+        return self.coordinator.sensor_state("oper_power") == "on"
+
+    @property
+    def available(self):
+        return True
+
+    async def async_turn_on(self, **kwargs):
+        """Power the server on."""
+        await self._async_set_admin_power(self.entity_description.state_on)
+
+    async def async_turn_off(self, **kwargs):
+        """Gracefully shut the server down."""
+        await self._async_set_admin_power(self.entity_description.state_off)
+
+    async def _async_set_admin_power(self, desired_state):
+        def wrapper():
+            rack_unit_mo = self.coordinator.client.query_dn("sys/rack-unit-1")
+            rack_unit_mo.admin_power = desired_state
+            self.coordinator.client.set_mo(rack_unit_mo)
+
+        await self.hass.async_add_executor_job(wrapper)
+        await self.coordinator.async_request_refresh()
 
     @property
     def should_poll(self):

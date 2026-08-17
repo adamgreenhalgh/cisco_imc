@@ -54,6 +54,7 @@ from .const import (
     BINARY_SENSOR_TYPE,
     BUTTON_TYPES,
     FEATURE_SWITCH_TYPES,
+    POWER_SWITCH_TYPE,
     BOOT_DEVICE_SELECT_TYPE,
     DEFAULT_SCAN_INTERVAL,
     MIN_SCAN_INTERVAL,
@@ -195,6 +196,7 @@ async def get_homeassistant_components(hass, config_entry) -> dict[
         services["button"][button_type.key] = button_type
     for feature_type in FEATURE_SWITCH_TYPES:
         services["switch"][feature_type.key] = feature_type
+    services["switch"][POWER_SWITCH_TYPE.key] = POWER_SWITCH_TYPE
     services["select"][BOOT_DEVICE_SELECT_TYPE.key] = BOOT_DEVICE_SELECT_TYPE
     return services
 

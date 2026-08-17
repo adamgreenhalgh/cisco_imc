@@ -266,6 +266,19 @@ FEATURE_SWITCH_TYPES = [
     ),
 ]
 
+# Handled separately from FEATURE_SWITCH_TYPES: reflects oper_power
+# (already polled as part of RACK_UNIT_SENSORS) rather than an
+# admin_state on a sub-object, and writes admin_power on sys/rack-unit-1
+# itself rather than admin_state.
+POWER_SWITCH_TYPE = CiscoImcSwitchEntityDescription(
+    key="power",
+    name="Power",
+    icon="mdi:power",
+    device_class=SwitchDeviceClass.SWITCH,
+    state_on="up",
+    state_off="soft-shut-down",
+)
+
 BOOT_DEVICE_SELECT_TYPE = CiscoImcSelectEntityDescription(
     key="next_boot_device",
     name="Next Boot Device",
