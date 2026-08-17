@@ -11,7 +11,7 @@
     "@adamgreenhalgh"
   ],
   "requirements": [
-    "imcsdk@git+https://github.com/adamgreenhalgh/imcsdk.git@master",
+    "imcsdk@git+https://github.com/adamgreenhalgh/imcsdk.git@50034a3d7044be36d3075291ca890050725da78d",
     "iso8601==2.1.0",
     "integrationhelper==0.2.2"
   ],
