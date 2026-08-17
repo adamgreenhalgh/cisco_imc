@@ -59,6 +59,9 @@ from .const import (
     ONE_TIME_BOOT_SELECT_TYPE,
     FAULT_COUNT_SENSOR,
     FAULT_COUNT_SENSOR_TYPE,
+    PCI_DEVICE_COUNT_SENSOR,
+    PCI_DEVICE_COUNT_SENSOR_TYPE,
+    PCI_DEVICES_ATTR,
     FAULT_PROBLEM_SENSOR,
     FAULT_PROBLEM_TYPE,
     FAULT_PROBLEM_SEVERITIES,
@@ -197,6 +200,7 @@ async def get_homeassistant_components(hass, config_entry) -> dict[
 
     services["sensor"][STATIC_SENSOR] = STATIC_SENSOR_TYPE
     services["sensor"][FAULT_COUNT_SENSOR] = FAULT_COUNT_SENSOR_TYPE
+    services["sensor"][PCI_DEVICE_COUNT_SENSOR] = PCI_DEVICE_COUNT_SENSOR_TYPE
     services["switch"][SWITCH] = SWITCH_TYPE
     services["binary_sensor"][BINARY_SENSOR] = BINARY_SENSOR_TYPE
     services["binary_sensor"][FAULT_PROBLEM_SENSOR] = FAULT_PROBLEM_TYPE
@@ -393,6 +397,24 @@ class CiscoImcDataService(DataUpdateCoordinator):
             _LOGGER.debug(f"{self.imc} could not read faults: {ex}")
             self.hass.custom_attributes[self.imc]['fault_count'] = 0
             self.hass.custom_attributes[self.imc]['fault_problem'] = False
+
+        try:
+            pci_devices = [
+                {
+                    "slot": mo.id,
+                    "vendor": mo.vendor,
+                    "model": mo.model,
+                    "pid": mo.pid,
+                    "firmware_version": mo.version,
+                }
+                for mo in self.client.query_classid(class_id="PciEquipSlot")
+            ]
+            self.hass.custom_attributes[self.imc][PCI_DEVICE_COUNT_SENSOR] = len(pci_devices)
+            self.hass.custom_attributes[self.imc][PCI_DEVICES_ATTR] = pci_devices
+        except Exception as ex:
+            _LOGGER.debug(f"{self.imc} could not read PCI device inventory: {ex}")
+            self.hass.custom_attributes[self.imc][PCI_DEVICE_COUNT_SENSOR] = 0
+            self.hass.custom_attributes[self.imc][PCI_DEVICES_ATTR] = []
 
         _LOGGER.debug(f"Updated Cisco IMC Rack Unit {self.imc}: {self.hass.custom_attributes[self.imc]}")
 

@@ -90,3 +90,11 @@ class CiscoImcRackUnitSensor(CiscoImcSensorEntity):
     def device_state_attributes(self):
         """Return the state attributes of the sensor."""
         return self.hass.custom_attributes[self.imc][self.entity_description.key]
+
+    @property
+    def extra_state_attributes(self):
+        """Return additional attributes, if this sensor's description names one."""
+        attributes_key = self.entity_description.attributes_key
+        if not attributes_key:
+            return {}
+        return {attributes_key: self.hass.custom_attributes[self.imc].get(attributes_key, [])}

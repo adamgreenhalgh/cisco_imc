@@ -174,6 +174,19 @@ FAULT_COUNT_SENSOR_TYPE = CiscoImcSensorEntityDescription(
     icon="mdi:alert-circle-outline",
 )
 
+# Populated PCIe slots (adaptors, HBAs, GPUs, etc.) from PciEquipSlot.
+# The sensor's state is just the count; the full per-device list (model,
+# vendor, pid, firmware version) is exposed as an attribute since it's a
+# variable-length list, not something worth a fixed set of entities.
+PCI_DEVICE_COUNT_SENSOR = "pci_device_count"
+PCI_DEVICES_ATTR = "pci_devices"
+PCI_DEVICE_COUNT_SENSOR_TYPE = CiscoImcSensorEntityDescription(
+    key=PCI_DEVICE_COUNT_SENSOR,
+    name="PCI Device Count",
+    icon="mdi:expansion-card",
+    attributes_key=PCI_DEVICES_ATTR,
+)
+
 # Severities counted as an actual problem for FAULT_PROBLEM_TYPE below.
 # "condition"/"info"/"cleared" are excluded as informational/resolved.
 FAULT_PROBLEM_SEVERITIES = {"critical", "major", "minor", "warning"}

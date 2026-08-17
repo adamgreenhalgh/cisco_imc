@@ -15,6 +15,10 @@ class CiscoImcSensorEntityDescription(SensorEntityDescription):
     """Sensor entity description for CiscoImc."""
 
     property_key: str | None = None
+    # When set, hass.custom_attributes[imc][attributes_key] is exposed as
+    # this sensor's extra_state_attributes under that same key - e.g. a
+    # count sensor whose attribute holds the full list it counted.
+    attributes_key: str | None = None
 
 @dataclass
 class CiscoImcBinarySensorEntityDescription(BinarySensorEntityDescription):
