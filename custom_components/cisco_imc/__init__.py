@@ -13,6 +13,7 @@ from collections import defaultdict
 
 from imcsdk.imchandle import ImcHandle
 from imcsdk.imcexception import ImcLoginError, ImcException, ImcConnectionError
+from imcsdk.apis.server.boot import boot_precision_configured_get
 
 from urllib.error import URLError
 
@@ -52,6 +53,8 @@ from .const import (
     SWITCH_TYPE,
     BINARY_SENSOR_TYPE,
     BUTTON_TYPES,
+    FEATURE_SWITCH_TYPES,
+    BOOT_DEVICE_SELECT_TYPE,
     DEFAULT_SCAN_INTERVAL,
     MIN_SCAN_INTERVAL,
 )
@@ -179,6 +182,7 @@ async def get_homeassistant_components(hass, config_entry) -> dict[
     services.setdefault("switch", {})
     services.setdefault("binary_sensor", {})
     services.setdefault("button", {})
+    services.setdefault("select", {})
     for key in RACK_UNIT_SENSORS:
         for sensor_type in SENSOR_TYPES:
             if sensor_type.key == key:
@@ -189,6 +193,9 @@ async def get_homeassistant_components(hass, config_entry) -> dict[
     services["binary_sensor"][BINARY_SENSOR] = BINARY_SENSOR_TYPE
     for button_type in BUTTON_TYPES:
         services["button"][button_type.key] = button_type
+    for feature_type in FEATURE_SWITCH_TYPES:
+        services["switch"][feature_type.key] = feature_type
+    services["select"][BOOT_DEVICE_SELECT_TYPE.key] = BOOT_DEVICE_SELECT_TYPE
     return services
 
 async def async_unload_entry(hass, config_entry) -> bool:
@@ -325,6 +332,30 @@ class CiscoImcDataService(DataUpdateCoordinator):
         for key, value in rack_unit.__dict__.items():
             if key in RACK_UNIT_SENSORS:
                 self.hass.custom_attributes[self.imc][key] = value
+
+        for feature_type in FEATURE_SWITCH_TYPES:
+            try:
+                mo = self.client.query_dn(feature_type.dn)
+                state = (mo.admin_state or "").lower() if mo else ""
+                self.hass.custom_attributes[self.imc][feature_type.key] = (
+                    state == feature_type.state_on.lower()
+                )
+            except Exception as ex:
+                _LOGGER.debug(f"{self.imc} could not read {feature_type.key} state: {ex}")
+                self.hass.custom_attributes[self.imc][feature_type.key] = False
+
+        try:
+            boot_order = boot_precision_configured_get(self.client)
+            precision_mo = self.client.query_dn("sys/rack-unit-1/boot-precision")
+            self.hass.custom_attributes[self.imc]['boot_order'] = boot_order
+            self.hass.custom_attributes[self.imc]['configured_boot_mode'] = (
+                precision_mo.configured_boot_mode if precision_mo else "Legacy"
+            )
+        except Exception as ex:
+            _LOGGER.debug(f"{self.imc} could not read boot order: {ex}")
+            self.hass.custom_attributes[self.imc]['boot_order'] = []
+            self.hass.custom_attributes[self.imc]['configured_boot_mode'] = "Legacy"
+
         _LOGGER.debug(f"Updated Cisco IMC Rack Unit {self.imc}: {self.hass.custom_attributes[self.imc]}")
 
     def set_polling_state(self, new_state):

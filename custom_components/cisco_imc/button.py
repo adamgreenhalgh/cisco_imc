@@ -4,6 +4,8 @@ import logging
 from homeassistant.components.button import ButtonEntity
 from homeassistant.const import CONF_IP_ADDRESS
 
+from imcsdk.apis.server.vmedia import vmedia_mount_remove_all
+
 from .const import DOMAIN, NAME
 from .imc_device import CiscoImcDevice
 from .models import CiscoImcButtonEntityDescription
@@ -53,16 +55,22 @@ class CiscoImcPowerButton(CiscoImcDevice, ButtonEntity):
         return True
 
     async def async_press(self) -> None:
-        """Send the button's admin-power action to the CIMC."""
-        _LOGGER.debug(
-            "Setting admin_power=%s for %s",
-            self.entity_description.desired_state,
-            self.imc,
-        )
+        """Send the button's action to the CIMC."""
+        if self.entity_description.feature == "eject_vmedia":
+            _LOGGER.debug("Ejecting all mounted virtual media for %s", self.imc)
 
-        def wrapper():
-            rack_unit_mo = self.coordinator.client.query_dn("sys/rack-unit-1")
-            rack_unit_mo.admin_power = self.entity_description.desired_state
-            self.coordinator.client.set_mo(rack_unit_mo)
+            def wrapper():
+                vmedia_mount_remove_all(self.coordinator.client)
+        else:
+            _LOGGER.debug(
+                "Setting admin_power=%s for %s",
+                self.entity_description.desired_state,
+                self.imc,
+            )
+
+            def wrapper():
+                rack_unit_mo = self.coordinator.client.query_dn("sys/rack-unit-1")
+                rack_unit_mo.admin_power = self.entity_description.desired_state
+                self.coordinator.client.set_mo(rack_unit_mo)
 
         await self.hass.async_add_executor_job(wrapper)

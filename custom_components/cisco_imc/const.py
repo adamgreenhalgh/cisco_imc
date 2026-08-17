@@ -12,6 +12,7 @@ from .models import (
     CiscoImcSensorEntityDescription,
     CiscoImcSwitchEntityDescription,
     CiscoImcButtonEntityDescription,
+    CiscoImcSelectEntityDescription,
 )
 
 # Base component constants
@@ -50,7 +51,7 @@ MIN_SCAN_INTERVAL = 60
 SIGNAL_STATE_UPDATED = f"{DOMAIN}.updated"
 
 # Platforms
-PLATFORMS = ["binary_sensor", "sensor", "switch", "button"]
+PLATFORMS = ["binary_sensor", "sensor", "switch", "button", "select"]
 
 # Configuration and options
 CONF_NAME = "name"
@@ -85,6 +86,12 @@ SERVICE_ENTITY_ID = "entity_id"
 SERVICE_ENTRY_ID = "config_entry_id"
 SERVICE_DATA = "data"
 SERVICE_SET_ADMIN_POWER = "set_admin_power"
+SERVICE_MOUNT_ISO = "mount_iso"
+SERVICE_UNMOUNT_ISO = "unmount_iso"
+SERVICE_URI = "uri"
+SERVICE_VOLUME_NAME = "volume_name"
+SERVICE_USERNAME = "username"
+SERVICE_PASSWORD = "password"
 
 STARTUP_MESSAGE = f"""
 -------------------------------------------------------------------
@@ -199,4 +206,68 @@ BUTTON_TYPES = [
         icon="mdi:restart-alert",
         desired_state="hard-reset-immediate",
     ),
+    CiscoImcButtonEntityDescription(
+        key="eject_all_vmedia",
+        name="Eject All Virtual Media",
+        icon="mdi:eject",
+        feature="eject_vmedia",
+    ),
 ]
+
+# CIMC-backed hardware feature switches. All read/write a single
+# "admin_state" property on a fixed dn under sys/rack-unit-1 or
+# sys/svc-ext (classic/rack-mount platform only, matching the rest of
+# this integration's assumptions).
+FEATURE_SWITCH_TYPES = [
+    CiscoImcSwitchEntityDescription(
+        key="locator_led",
+        name="Locator LED",
+        icon="mdi:led-on",
+        device_class=SwitchDeviceClass.SWITCH,
+        dn="sys/rack-unit-1/locator-led",
+        state_on="on",
+        state_off="off",
+    ),
+    CiscoImcSwitchEntityDescription(
+        key="kvm",
+        name="KVM Console",
+        icon="mdi:remote-desktop",
+        device_class=SwitchDeviceClass.SWITCH,
+        dn="sys/svc-ext/kvm-svc",
+        state_on="enabled",
+        state_off="disabled",
+    ),
+    CiscoImcSwitchEntityDescription(
+        key="vmedia",
+        name="Virtual Media",
+        icon="mdi:disc-player",
+        device_class=SwitchDeviceClass.SWITCH,
+        dn="sys/svc-ext/vmedia-svc",
+        state_on="enabled",
+        state_off="disabled",
+    ),
+    CiscoImcSwitchEntityDescription(
+        key="sol",
+        name="Serial Over LAN",
+        icon="mdi:console-network",
+        device_class=SwitchDeviceClass.SWITCH,
+        dn="sys/rack-unit-1/sol-if",
+        state_on="enable",
+        state_off="disable",
+    ),
+    CiscoImcSwitchEntityDescription(
+        key="ipmi_lan",
+        name="IPMI over LAN",
+        icon="mdi:server-network",
+        device_class=SwitchDeviceClass.SWITCH,
+        dn="sys/svc-ext/ipmi-lan-svc",
+        state_on="enabled",
+        state_off="disabled",
+    ),
+]
+
+BOOT_DEVICE_SELECT_TYPE = CiscoImcSelectEntityDescription(
+    key="next_boot_device",
+    name="Next Boot Device",
+    icon="mdi:restart",
+)

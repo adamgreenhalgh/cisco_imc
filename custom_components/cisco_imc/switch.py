@@ -23,7 +23,10 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     entities = []
     for device_key in entry_data["devices"]["switch"].keys():
         device_class = entry_data["devices"]["switch"][device_key]
-        entities.append(ImcPollingSwitch(hass, config_entry, device_class, coordinator))
+        if device_class.dn:
+            entities.append(ImcFeatureSwitch(hass, config_entry, device_class, coordinator))
+        else:
+            entities.append(ImcPollingSwitch(hass, config_entry, device_class, coordinator))
     async_add_entities(entities, True)
 
 
@@ -88,6 +91,74 @@ class ImcPollingSwitch(CiscoImcDevice, SwitchEntity):
     def async_update_available(self):
         super().async_update_available()
         self._attr_extra_state_attributes["available"] = True
+
+    @property
+    def should_poll(self):
+        return False
+
+
+class ImcFeatureSwitch(CiscoImcDevice, SwitchEntity):
+    """Representation of a CIMC-backed hardware feature switch.
+
+    Covers on/off toggles for things like the locator LED, KVM console,
+    virtual media, serial-over-LAN and IPMI-over-LAN, all of which are a
+    single admin_state property write on a fixed dn.
+    """
+
+    entity_description: CiscoImcSwitchEntityDescription
+
+    def __init__(self, hass, config_entry, entity_description, coordinator):
+        """Initialise the switch."""
+        self.hass = hass
+        self.platform_name = "switch"
+        self.entity_description = entity_description
+        self.imc = config_entry.data.get(CONF_IP_ADDRESS)[0]
+        self.coordinator = coordinator
+        self._attr_name = f"{NAME} {self.imc} {self.entity_description.name}"
+        if self.hass.custom_attributes[self.imc]['usr_lbl']:
+            self._attr_name = f"{self.hass.custom_attributes[self.imc]['usr_lbl']} {self.entity_description.name}"
+        self._attributes = {}
+
+        super().__init__(self, hass, self.imc, entity_description, coordinator)
+
+    @property
+    def unique_id(self):
+        """Return a unique ID."""
+        if not self.coordinator.imc:
+            return None
+        return f"{DOMAIN}_{self.imc.lower().replace('.', '_')}_{self.entity_description.key}"
+
+    @property
+    def is_on(self):
+        """Return the last-polled state of this feature."""
+        return bool(self.coordinator.sensor_state(self.entity_description.key))
+
+    @property
+    def available(self):
+        return True
+
+    async def async_turn_on(self, **kwargs):
+        """Enable this feature on the CIMC."""
+        await self._async_set_admin_state(self.entity_description.state_on)
+
+    async def async_turn_off(self, **kwargs):
+        """Disable this feature on the CIMC."""
+        await self._async_set_admin_state(self.entity_description.state_off)
+
+    async def _async_set_admin_state(self, admin_state):
+        """Write admin_state to the CIMC and optimistically update cached state."""
+        dn = self.entity_description.dn
+
+        def wrapper():
+            mo = self.coordinator.client.query_dn(dn)
+            mo.admin_state = admin_state
+            self.coordinator.client.set_mo(mo)
+
+        await self.hass.async_add_executor_job(wrapper)
+        self.hass.custom_attributes[self.imc][self.entity_description.key] = (
+            admin_state == self.entity_description.state_on
+        )
+        self.async_write_ha_state()
 
     @property
     def should_poll(self):

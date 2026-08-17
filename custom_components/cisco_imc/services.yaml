@@ -24,3 +24,46 @@ set_admin_power:
       required: true
       description: The desired power state of the IMC
       example: sensor.cisco_imc_192_168_1_255_power
+
+mount_iso:
+  name: Mount vMedia ISO
+  description: Mounts a remote ISO image via CIMC virtual media. Can take up to 60 seconds while the CIMC verifies the mapping.
+  fields:
+    entity_id:
+      name: Entity ID
+      required: true
+      description: Any entity belonging to the target CIMC
+      example: sensor.cisco_imc_192_168_1_255_ip_address
+    uri:
+      name: ISO URI
+      required: true
+      description: "Full URI of the ISO image, e.g. http://host/path/file.iso, //host/share/file.iso (CIFS), or host:/share/file.iso (NFS)"
+      example: "http://192.168.0.10/images/ubuntu-24.04-live-server-amd64.iso"
+    volume_name:
+      name: Volume Name
+      required: false
+      description: Optional label for the mount. Defaults to the ISO filename.
+      example: ubuntu-install
+    username:
+      name: Username
+      required: false
+      description: Username, if the share requires authentication
+    password:
+      name: Password
+      required: false
+      description: Password, if the share requires authentication
+
+unmount_iso:
+  name: Unmount vMedia ISO
+  description: Unmounts a specific virtual media volume, or all mounted volumes if volume_name is omitted.
+  fields:
+    entity_id:
+      name: Entity ID
+      required: true
+      description: Any entity belonging to the target CIMC
+      example: sensor.cisco_imc_192_168_1_255_ip_address
+    volume_name:
+      name: Volume Name
+      required: false
+      description: Name of the volume to unmount. Omit to eject all mounted virtual media.
+      example: ubuntu-install
