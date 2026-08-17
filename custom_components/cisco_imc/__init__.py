@@ -70,6 +70,7 @@ from .const import (
     FAULT_PROBLEM_SEVERITIES,
     DEFAULT_SCAN_INTERVAL,
     MIN_SCAN_INTERVAL,
+    SLOW_POLL_INTERVAL_CYCLES,
 )
 
 CONFIG_SCHEMA = cv.removed(DOMAIN, raise_if_present=False)
@@ -274,6 +275,7 @@ class CiscoImcDataService(DataUpdateCoordinator):
         self.hass.custom_attributes[self.imc]['ip_address'] = self.imc
         self.hass.custom_attributes[self.imc]['reachable'] = False
         self.hass.custom_attributes[self.imc]['unreachable_counter'] = 0
+        self._poll_cycle = 0
         self.update_interval = timedelta(seconds=MIN_SCAN_INTERVAL)
         self.client = ImcHandle(
             self.imc,
@@ -341,12 +343,21 @@ class CiscoImcDataService(DataUpdateCoordinator):
             self.hass.custom_attributes[self.imc]['reachable'] = False
             self.hass.custom_attributes[self.imc]['unreachable_counter'] += 1
             raise UpdateFailed("Unable to contact the IMC, skipping update") from ex
+        # PCI/CPU inventory is only re-queried every SLOW_POLL_INTERVAL_CYCLES
+        # (see const.py); preserve last-known values across clear() so they
+        # don't go blank on the cycles where they're skipped.
+        preserved_inventory = {
+            key: self.hass.custom_attributes[self.imc].get(key)
+            for key in (PCI_DEVICE_COUNT_SENSOR, PCI_DEVICES_ATTR, CPU_MODEL_SENSOR, CPUS_ATTR)
+        }
+
         self.hass.custom_attributes[self.imc].clear()
         self.hass.custom_attributes[self.imc]['ip_address'] = self.imc
 
         self.hass.custom_attributes[self.imc]['reachable'] = True
         self.hass.custom_attributes[self.imc]['polling_switch'] = True
         self.hass.custom_attributes[self.imc]['unreachable_counter'] = 0
+        self.hass.custom_attributes[self.imc].update(preserved_inventory)
 
         for key, value in rack_unit.__dict__.items():
             if key in RACK_UNIT_SENSORS:
@@ -402,46 +413,52 @@ class CiscoImcDataService(DataUpdateCoordinator):
             self.hass.custom_attributes[self.imc]['fault_count'] = 0
             self.hass.custom_attributes[self.imc]['fault_problem'] = False
 
-        try:
-            pci_devices = [
-                {
-                    "slot": mo.id,
-                    "vendor": mo.vendor,
-                    "model": mo.model,
-                    "pid": mo.pid,
-                    "firmware_version": mo.version,
-                }
-                for mo in self.client.query_classid(class_id="PciEquipSlot")
-            ]
-            self.hass.custom_attributes[self.imc][PCI_DEVICE_COUNT_SENSOR] = len(pci_devices)
-            self.hass.custom_attributes[self.imc][PCI_DEVICES_ATTR] = pci_devices
-        except Exception as ex:
-            _LOGGER.debug(f"{self.imc} could not read PCI device inventory: {ex}")
-            self.hass.custom_attributes[self.imc][PCI_DEVICE_COUNT_SENSOR] = 0
-            self.hass.custom_attributes[self.imc][PCI_DEVICES_ATTR] = []
+        self._poll_cycle += 1
+        due_for_slow_poll = (
+            self._poll_cycle == 1 or self._poll_cycle % SLOW_POLL_INTERVAL_CYCLES == 0
+        )
 
-        try:
-            cpus = [
-                {
-                    "socket": mo.socket_designation,
-                    "vendor": mo.vendor,
-                    "model": mo.model,
-                    "speed_mhz": mo.speed,
-                    "cores": mo.cores,
-                    "threads": mo.threads,
-                    "presence": mo.presence,
-                }
-                for mo in self.client.query_classid(class_id="ProcessorUnit")
-            ]
-            equipped = [cpu for cpu in cpus if cpu["presence"] == "equipped"]
-            self.hass.custom_attributes[self.imc][CPU_MODEL_SENSOR] = (
-                equipped[0]["model"] if equipped else None
-            )
-            self.hass.custom_attributes[self.imc][CPUS_ATTR] = cpus
-        except Exception as ex:
-            _LOGGER.debug(f"{self.imc} could not read CPU inventory: {ex}")
-            self.hass.custom_attributes[self.imc][CPU_MODEL_SENSOR] = None
-            self.hass.custom_attributes[self.imc][CPUS_ATTR] = []
+        if due_for_slow_poll:
+            try:
+                pci_devices = [
+                    {
+                        "slot": mo.id,
+                        "vendor": mo.vendor,
+                        "model": mo.model,
+                        "pid": mo.pid,
+                        "firmware_version": mo.version,
+                    }
+                    for mo in self.client.query_classid(class_id="PciEquipSlot")
+                ]
+                self.hass.custom_attributes[self.imc][PCI_DEVICE_COUNT_SENSOR] = len(pci_devices)
+                self.hass.custom_attributes[self.imc][PCI_DEVICES_ATTR] = pci_devices
+            except Exception as ex:
+                _LOGGER.debug(f"{self.imc} could not read PCI device inventory: {ex}")
+                self.hass.custom_attributes[self.imc][PCI_DEVICE_COUNT_SENSOR] = 0
+                self.hass.custom_attributes[self.imc][PCI_DEVICES_ATTR] = []
+
+            try:
+                cpus = [
+                    {
+                        "socket": mo.socket_designation,
+                        "vendor": mo.vendor,
+                        "model": mo.model,
+                        "speed_mhz": mo.speed,
+                        "cores": mo.cores,
+                        "threads": mo.threads,
+                        "presence": mo.presence,
+                    }
+                    for mo in self.client.query_classid(class_id="ProcessorUnit")
+                ]
+                equipped = [cpu for cpu in cpus if cpu["presence"] == "equipped"]
+                self.hass.custom_attributes[self.imc][CPU_MODEL_SENSOR] = (
+                    equipped[0]["model"] if equipped else None
+                )
+                self.hass.custom_attributes[self.imc][CPUS_ATTR] = cpus
+            except Exception as ex:
+                _LOGGER.debug(f"{self.imc} could not read CPU inventory: {ex}")
+                self.hass.custom_attributes[self.imc][CPU_MODEL_SENSOR] = None
+                self.hass.custom_attributes[self.imc][CPUS_ATTR] = []
 
         _LOGGER.debug(f"Updated Cisco IMC Rack Unit {self.imc}: {self.hass.custom_attributes[self.imc]}")
 

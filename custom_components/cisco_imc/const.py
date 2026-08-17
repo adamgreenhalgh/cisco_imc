@@ -48,6 +48,14 @@ ICONS = {
 DEFAULT_SCAN_INTERVAL = 660
 MIN_SCAN_INTERVAL = 60
 
+# Concurrent requests against a single CIMC session aren't safe - some
+# firmware hard-fails (socket timeout) on even 2 in flight at once, so the
+# ~10 queries in update() have to stay sequential. To keep each poll cheap
+# anyway, slow-changing hardware inventory (PCI slots, CPUs) is only
+# re-queried every Nth cycle instead of every cycle; it's polled on the
+# very first cycle too, so a freshly-added server isn't left blank.
+SLOW_POLL_INTERVAL_CYCLES = 10
+
 SIGNAL_STATE_UPDATED = f"{DOMAIN}.updated"
 
 # Platforms
