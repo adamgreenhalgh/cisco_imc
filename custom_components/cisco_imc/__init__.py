@@ -51,6 +51,7 @@ from .const import (
     STATIC_SENSOR_TYPE,
     SWITCH_TYPE,
     BINARY_SENSOR_TYPE,
+    BUTTON_TYPES,
     DEFAULT_SCAN_INTERVAL,
     MIN_SCAN_INTERVAL,
 )
@@ -177,14 +178,17 @@ async def get_homeassistant_components(hass, config_entry) -> dict[
     services.setdefault("sensor", {})
     services.setdefault("switch", {})
     services.setdefault("binary_sensor", {})
+    services.setdefault("button", {})
     for key in RACK_UNIT_SENSORS:
         for sensor_type in SENSOR_TYPES:
             if sensor_type.key == key:
                 services["sensor"][key] = sensor_type
-    
+
     services["sensor"][STATIC_SENSOR] = STATIC_SENSOR_TYPE
     services["switch"][SWITCH] = SWITCH_TYPE
     services["binary_sensor"][BINARY_SENSOR] = BINARY_SENSOR_TYPE
+    for button_type in BUTTON_TYPES:
+        services["button"][button_type.key] = button_type
     return services
 
 async def async_unload_entry(hass, config_entry) -> bool:

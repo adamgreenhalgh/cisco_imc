@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from homeassistant.components.sensor import SensorEntityDescription
 from homeassistant.components.binary_sensor import BinarySensorEntityDescription
 from homeassistant.components.switch import SwitchEntityDescription
+from homeassistant.components.button import ButtonEntityDescription
 
 
 @dataclass
@@ -25,3 +26,9 @@ class CiscoImcSwitchEntityDescription(SwitchEntityDescription):
     """Switch entity description for CiscoImc."""
 
     property_key: str | None = None
+
+@dataclass
+class CiscoImcButtonEntityDescription(ButtonEntityDescription):
+    """Button entity description for CiscoImc."""
+
+    desired_state: str | None = None

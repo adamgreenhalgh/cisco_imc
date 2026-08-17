@@ -11,6 +11,7 @@ from .models import (
     CiscoImcBinarySensorEntityDescription,
     CiscoImcSensorEntityDescription,
     CiscoImcSwitchEntityDescription,
+    CiscoImcButtonEntityDescription,
 )
 
 # Base component constants
@@ -49,7 +50,7 @@ MIN_SCAN_INTERVAL = 60
 SIGNAL_STATE_UPDATED = f"{DOMAIN}.updated"
 
 # Platforms
-PLATFORMS = ["binary_sensor", "sensor", "switch"]
+PLATFORMS = ["binary_sensor", "sensor", "switch", "button"]
 
 # Configuration and options
 CONF_NAME = "name"
@@ -172,3 +173,30 @@ SWITCH_TYPE = CiscoImcSwitchEntityDescription(
     icon="mdi:sync",
     device_class=SwitchDeviceClass.SWITCH
 )
+
+BUTTON_TYPES = [
+    CiscoImcButtonEntityDescription(
+        key="power_on",
+        name="Power On",
+        icon="mdi:power-on",
+        desired_state="up",
+    ),
+    CiscoImcButtonEntityDescription(
+        key="power_off",
+        name="Power Off",
+        icon="mdi:power-off",
+        desired_state="soft-shut-down",
+    ),
+    CiscoImcButtonEntityDescription(
+        key="power_cycle",
+        name="Power Cycle",
+        icon="mdi:restart",
+        desired_state="cycle-immediate",
+    ),
+    CiscoImcButtonEntityDescription(
+        key="hard_reset",
+        name="Hard Reset",
+        icon="mdi:restart-alert",
+        desired_state="hard-reset-immediate",
+    ),
+]
