@@ -56,6 +56,12 @@ from .const import (
     FEATURE_SWITCH_TYPES,
     POWER_SWITCH_TYPE,
     BOOT_DEVICE_SELECT_TYPE,
+    ONE_TIME_BOOT_SELECT_TYPE,
+    FAULT_COUNT_SENSOR,
+    FAULT_COUNT_SENSOR_TYPE,
+    FAULT_PROBLEM_SENSOR,
+    FAULT_PROBLEM_TYPE,
+    FAULT_PROBLEM_SEVERITIES,
     DEFAULT_SCAN_INTERVAL,
     MIN_SCAN_INTERVAL,
 )
@@ -190,14 +196,17 @@ async def get_homeassistant_components(hass, config_entry) -> dict[
                 services["sensor"][key] = sensor_type
 
     services["sensor"][STATIC_SENSOR] = STATIC_SENSOR_TYPE
+    services["sensor"][FAULT_COUNT_SENSOR] = FAULT_COUNT_SENSOR_TYPE
     services["switch"][SWITCH] = SWITCH_TYPE
     services["binary_sensor"][BINARY_SENSOR] = BINARY_SENSOR_TYPE
+    services["binary_sensor"][FAULT_PROBLEM_SENSOR] = FAULT_PROBLEM_TYPE
     for button_type in BUTTON_TYPES:
         services["button"][button_type.key] = button_type
     for feature_type in FEATURE_SWITCH_TYPES:
         services["switch"][feature_type.key] = feature_type
     services["switch"][POWER_SWITCH_TYPE.key] = POWER_SWITCH_TYPE
     services["select"][BOOT_DEVICE_SELECT_TYPE.key] = BOOT_DEVICE_SELECT_TYPE
+    services["select"][ONE_TIME_BOOT_SELECT_TYPE.key] = ONE_TIME_BOOT_SELECT_TYPE
     return services
 
 async def async_unload_entry(hass, config_entry) -> bool:
@@ -357,6 +366,33 @@ class CiscoImcDataService(DataUpdateCoordinator):
             _LOGGER.debug(f"{self.imc} could not read boot order: {ex}")
             self.hass.custom_attributes[self.imc]['boot_order'] = []
             self.hass.custom_attributes[self.imc]['configured_boot_mode'] = "Legacy"
+
+        try:
+            one_time_mo = self.client.query_dn("sys/rack-unit-1/one-time-precision-boot")
+            self.hass.custom_attributes[self.imc]['one_time_boot_device'] = (
+                one_time_mo.device if one_time_mo and one_time_mo.device else None
+            )
+        except Exception as ex:
+            _LOGGER.debug(f"{self.imc} could not read one-time boot device: {ex}")
+            self.hass.custom_attributes[self.imc]['one_time_boot_device'] = None
+
+        try:
+            faults = self.client.query_classid(class_id="FaultInst")
+            problem_faults = [
+                f for f in faults
+                if (f.severity or "").lower() in FAULT_PROBLEM_SEVERITIES
+            ]
+            self.hass.custom_attributes[self.imc]['fault_count'] = len(faults)
+            self.hass.custom_attributes[self.imc]['fault_problem'] = bool(problem_faults)
+            if problem_faults:
+                _LOGGER.warning(
+                    "%s has %d active fault(s): %s", self.imc, len(problem_faults),
+                    "; ".join(f"{f.severity}: {f.descr}" for f in problem_faults),
+                )
+        except Exception as ex:
+            _LOGGER.debug(f"{self.imc} could not read faults: {ex}")
+            self.hass.custom_attributes[self.imc]['fault_count'] = 0
+            self.hass.custom_attributes[self.imc]['fault_problem'] = False
 
         _LOGGER.debug(f"Updated Cisco IMC Rack Unit {self.imc}: {self.hass.custom_attributes[self.imc]}")
 

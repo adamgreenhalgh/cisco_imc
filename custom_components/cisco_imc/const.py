@@ -167,11 +167,30 @@ STATIC_SENSOR_TYPE = CiscoImcSensorEntityDescription(
     icon="mdi:ip-outline",
 )
 
+FAULT_COUNT_SENSOR = "fault_count"
+FAULT_COUNT_SENSOR_TYPE = CiscoImcSensorEntityDescription(
+    key=FAULT_COUNT_SENSOR,
+    name="Fault Count",
+    icon="mdi:alert-circle-outline",
+)
+
+# Severities counted as an actual problem for FAULT_PROBLEM_TYPE below.
+# "condition"/"info"/"cleared" are excluded as informational/resolved.
+FAULT_PROBLEM_SEVERITIES = {"critical", "major", "minor", "warning"}
+
 BINARY_SENSOR_TYPE = CiscoImcBinarySensorEntityDescription(
     key="reachable",
     name="Reachable",
     icon="mdi:lan-connect",
     device_class=BinarySensorDeviceClass.CONNECTIVITY
+)
+
+FAULT_PROBLEM_SENSOR = "fault_problem"
+FAULT_PROBLEM_TYPE = CiscoImcBinarySensorEntityDescription(
+    key=FAULT_PROBLEM_SENSOR,
+    name="Fault",
+    icon="mdi:alert-octagon-outline",
+    device_class=BinarySensorDeviceClass.PROBLEM,
 )
 
 SWITCH_TYPE = CiscoImcSwitchEntityDescription(
@@ -283,4 +302,13 @@ BOOT_DEVICE_SELECT_TYPE = CiscoImcSelectEntityDescription(
     key="next_boot_device",
     name="Next Boot Device",
     icon="mdi:restart",
+)
+
+# Sentinel option representing "no one-time boot device pending".
+ONE_TIME_BOOT_NONE = "None"
+
+ONE_TIME_BOOT_SELECT_TYPE = CiscoImcSelectEntityDescription(
+    key="one_time_boot_device",
+    name="One-Time Boot Device",
+    icon="mdi:restart-alert",
 )
